@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Weather and Pollution Data</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="text/javascript">
+    // Function to fetch weather data from OpenWeatherMap API
+    async function fetchWeatherData(city) {
+      const apiKey = '8001908ab9c1725ef5083a0bf7f6c443'; // Replace with your OpenWeatherMap API key
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
+
+      try {
+        const weatherResponse = await fetch(weatherUrl);
+        const weatherData = await weatherResponse.json();
+
+        if (weatherResponse.ok) {
+          // Extract longitude and latitude from the weather data
+          const longitude = weatherData.coord.lon;
+          const latitude = weatherData.coord.lat;
+
+          // Fetch pollution data using the latitude and longitude
+          const pollutionData = await fetchPollutionData(latitude, longitude);
+
+          // Fetch 7-day weather forecast
+          const forecastResponse = await fetch(forecastUrl);
+          const forecastData = await forecastResponse.json();
+
+          if (forecastResponse.ok) {
+            // Extract 7-day weather forecast
+            const forecast = forecastData.list;
+
+            return { longitude, latitude, pollutionData, forecast };
+          } else {
+            throw new Error(`Failed to fetch forecast data: ${forecastData.message}`);
+          }
+        } else {
+          throw new Error(`Failed to fetch weather data: ${weatherData.message}`);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    // Function to fetch pollution data from OpenWeatherMap API
+    async function fetchPollutionData(latitude, longitude) {
+      const apiKey = '8001908ab9c1725ef5083a0bf7f6c443'; // Replace with your OpenWeatherMap API key
+      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${apiKey}`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (response.ok) {
+          // Extract pollution data
+          const aqi = data.list[0].main.aqi;
+          const pm2_5 = data.list[0].components.pm2_5;
+          const pm10 = data.list[0].components.pm10;
+
+          return { aqi, pm2_5, pm10 };
+        } else {
+          throw new Error(`Failed to fetch pollution data: ${data.message}`);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    // Function to handle form submission
+    function handleSubmit() {
+      const city = document.getElementById('cityInput').value;
+      fetchWeatherData(city)
+        .then(({ longitude, latitude, pollutionData, forecast }) => {
+          // Display weather and pollution data
+          document.getElementById('result').innerHTML = `Longitude: ${longitude}<br>Latitude: ${latitude}<br>AQI: ${pollutionData.aqi}<br>PM2.5: ${pollutionData.pm2_5}<br>PM10: ${pollutionData.pm10}`;
+
+          // Display 7-day weather forecast
+          let forecastHtml = '<h2>7-Day Weather Forecast</h2>';
+          forecast.forEach((data) => {
+            const date = new Date(data.dt * 1000).toLocaleDateString();
+            const description = data.weather[0].description;
+            const temperature = data.main.temp;
+            forecastHtml += `<p>Date: ${date}</p><p>Description: ${description}</p><p>Temperature: ${temperature} &#8451;</p><hr>`;
+});
+
+document.getElementById('forecast').innerHTML = forecastHtml;
+})
+.catch((error) => {
+console.error(error);
+});
+}
+</script>
+</head>
+
+<body>
+<h1>Weather and Pollution Data</h1>
+<form onsubmit="event.preventDefault(); handleSubmit();">
+<label for="cityInput">City:</label>
+<input type="text" id="cityInput" name="cityInput" required>
+<button type="submit">Get Data</button>
+</form>
+<div id="result"></div>
+<div id="forecast"></div>
+</body>
+
+</html>
